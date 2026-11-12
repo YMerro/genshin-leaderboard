@@ -123,7 +123,10 @@ public class WishClient {
             } catch (RestClientException e) {
                 throw new WishImportException("Couldn't reach HoYoverse's wish history server. Try again in a moment.");
             }
-            int retcode = body == null ? -1 : body.path("retcode").asInt(-1);
+            if (body == null) {
+                throw new WishImportException("HoYoverse's wish history server sent an empty response. Try again in a moment.");
+            }
+            int retcode = body.path("retcode").asInt(-1);
             switch (retcode) {
                 case 0 -> { return body.path("data").path("list"); }
                 case -101 -> throw new WishImportException(
@@ -134,7 +137,7 @@ public class WishClient {
                     sleep(Duration.ofSeconds(2L * attempt));
                 }
                 default -> throw new WishImportException("HoYoverse returned an error ("
-                        + (body == null ? "no response" : body.path("message").asText("code " + retcode)) + ").");
+                        + body.path("message").asText("code " + retcode) + ").");
             }
         }
     }
