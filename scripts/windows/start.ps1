@@ -1,6 +1,18 @@
 # Starts the Friends Leaderboard in the background and restarts it if it stops unexpectedly.
-# Runs automatically at login (shortcut in the Startup folder). Use stop.ps1 to stop it.
+# Returns immediately: the watcher that keeps the app running is launched as a hidden process.
+# Use stop.ps1 to stop it.
+param([switch]$Supervise)
 $base = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+if (-not $Supervise) {
+    # Hand off to a hidden copy of this script so the terminal is free right away
+    Start-Process powershell -WindowStyle Hidden -ArgumentList '-NoProfile', '-WindowStyle', 'Hidden',
+        '-ExecutionPolicy', 'Bypass', '-File', "`"$($MyInvocation.MyCommand.Path)`"", '-Supervise'
+    Write-Host 'Friends Leaderboard is starting in the background. Open http://localhost:8081 in about 15 seconds.'
+    Write-Host 'Stop it with stop.ps1.'
+    exit
+}
+
 $java = if ($env:JAVA_HOME -and (Test-Path "$env:JAVA_HOME\bin\javaw.exe")) { "$env:JAVA_HOME\bin\javaw.exe" }
         elseif (Test-Path "$env:USERPROFILE\tools\jdk-21.0.13+9\bin\javaw.exe") { "$env:USERPROFILE\tools\jdk-21.0.13+9\bin\javaw.exe" }
         else { 'javaw.exe' }

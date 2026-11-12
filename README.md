@@ -92,7 +92,7 @@ Turn it on now (runs hidden in the background until you stop it, sign out or res
 powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\GenshinLeaderboard\start.ps1
 ```
 
-Give it about 15 seconds, then open http://localhost:8081. If it doesn't come up, check `%USERPROFILE%\GenshinLeaderboard\logs\launcher.log` and `app.log`.
+It returns right away and the app keeps running in the background. Give it about 15 seconds, then open http://localhost:8081. If it doesn't come up, check `%USERPROFILE%\GenshinLeaderboard\logs\launcher.log` and `app.log`.
 
 Turn it off:
 
