@@ -84,6 +84,26 @@ This sets up `%USERPROFILE%\GenshinLeaderboard`:
 
 Running the installer again is safe: existing data and settings are kept. Don't run `mvn spring-boot:run` on port 8081 at the same time; use `--server.port=8082` for a development copy.
 
+### Start and stop for this session only
+
+Turn it on now (runs hidden in the background until you stop it, sign out or restart the PC):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\GenshinLeaderboard\start.ps1
+```
+
+Give it about 15 seconds, then open http://localhost:8081. If it doesn't come up, check `%USERPROFILE%\GenshinLeaderboard\logs\launcher.log` and `app.log`.
+
+Turn it off:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\GenshinLeaderboard\stop.ps1
+```
+
+- Use these from any folder; they live in the install folder, not in the project. You can also right-click them there and choose **Run with PowerShell**.
+- Don't end it from Task Manager: while it's running it restarts itself after a crash, so it would come back after 15 seconds. `stop.ps1` stops it for good.
+- Nothing here changes auto-start: with auto-start disabled, the app stays off after a restart until you run `start.ps1` again.
+
 ### Auto-start at sign-in
 
 Off by default. Turn it on or off per PC with:
