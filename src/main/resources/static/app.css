@@ -318,6 +318,18 @@ img.mini { width: 26px; height: 26px; flex: none; }
   display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center;
   margin: 16px auto 0; font-weight: 600;
 }
+.quiz-modes { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 14px; }
+.quiz-modes .sub { margin-left: 4px; }
+.quiz-portrait { display: grid; place-items: center; }
+.quiz-portrait img {
+  width: 112px; height: 112px; border-radius: 50%; background: var(--bg-raised);
+  border: 2px solid var(--border); object-fit: cover;
+}
+.quiz-quote {
+  max-width: 560px; margin: 0 auto; padding: 16px 20px; font-size: 18px; font-style: italic; text-align: center;
+  background: var(--bg-raised); border: 1px solid var(--border); border-left: 3px solid var(--gold); border-radius: 10px;
+}
+.quiz-result span { max-width: 640px; text-align: center; }
 .quiz-result.right { color: var(--anemo); }
 .quiz-result.wrong { color: var(--danger); }
 

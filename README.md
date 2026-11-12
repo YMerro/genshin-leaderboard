@@ -7,7 +7,7 @@ A small web app that ranks you and your friends by Genshin Impact profile stats,
 - **Artifacts tab:** Hall of Fame (best rolled +20 artifacts in the group) and Hall of Shame (fewest useful rolls).
 - **Head-to-head tab:** pick two players and compare profile stats and shared characters, with a running score.
 - **Awards tab:** 14 auto-awarded titles (Crit Goblin, Roll God, Hall of Shame Regular, Battery, Whale Suspect, Book Hoarder…) with runners-up. Winners' titles also show under their name on the Players tab. Needs 2+ players.
-- **Quiz tab:** "Guess the owner": 10 rounds of a hidden-owner artifact or build (builds only for characters 2+ players own, so it's not a giveaway). Tracks score, streak and your best score in this browser.
+- **Quiz tab:** 10 random questions per game in four modes: *Mixed*, *Guess the owner* (whose artifact/build is this), *Account trivia* (who has the higher Abyss/AR/CV, which weapon or set someone's character uses, constellations, signatures, plus wish questions like last 5★, 50/50 results and pity when wishes are imported) and *Game trivia* (element, weapon type, rarity and "who is this?" for all characters, leaning toward ones your group owns). Question types rotate, nothing repeats within a game, answers are shuffled, and each answer shows the real values. Best score per mode is kept in this browser.
 
 - **Tier list tab:** characters ranked into SS–D tiers by the group's average roll score or crit value.
 - **Flex tab:** 5★ constellations, refinements, C6/R5 counts and each player's rarest character.

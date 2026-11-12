@@ -488,123 +488,6 @@ function renderAwards() {
       </div>`).join('')}</div>`;
 }
 
-/* ---------- guess the owner quiz ---------- */
-
-const QUIZ_ROUNDS = 10;
-const quiz = { round: 0, score: 0, streak: 0, question: null, answer: null, finished: false };
-
-function readBest() { try { return Number(localStorage.getItem('quizBest')) || 0; } catch { return 0; } }
-function saveBest(v) { try { localStorage.setItem('quizBest', String(v)); } catch { /* storage unavailable */ } }
-
-const shuffle = (list) => {
-  const a = [...list];
-  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
-  return a;
-};
-const pick = (list) => list[Math.floor(Math.random() * list.length)];
-
-function newQuestion() {
-  const players = loadedPlayers().filter((p) => p.characters.length);
-  if (players.length < 2) return null;
-  const builds = players.flatMap((p) => p.characters.map((c) => ({ p, c })));
-  const owners = new Map();
-  for (const { p, c } of builds) owners.set(c.name, new Set([...(owners.get(c.name) || []), p.uid]));
-  const shared = builds.filter(({ c }) => owners.get(c.name).size > 1);
-  const pieces = builds.flatMap((b) => b.c.artifacts.filter((a) => a.level >= 16).map((a) => ({ ...b, a })));
-
-  // Builds are only a fair question when 2+ players own that character; otherwise ask about an artifact
-  const useBuild = shared.length && (!pieces.length || Math.random() < 0.5);
-  const q = useBuild ? { type: 'build', ...pick(shared) } : pieces.length ? { type: 'artifact', ...pick(pieces) } : { type: 'build', ...pick(builds) };
-  const others = shuffle(players.filter((p) => p.uid !== q.p.uid)).slice(0, 3);
-  return { ...q, options: shuffle([q.p, ...others]) };
-}
-
-function startQuiz() {
-  Object.assign(quiz, { round: 1, score: 0, streak: 0, answer: null, finished: false, question: newQuestion() });
-}
-
-function quizBuildCard(c) {
-  const s = c.stats;
-  const w = c.weapon;
-  return `<div class="panel quiz-build ${elClass(c.element)}">
-    <div class="char-cell">${img(c.iconUrl, '', c.name)}<div>
-      <div class="name"><span class="el-dot"></span>${esc(c.name)}</div>
-      <div class="sub">Lv ${c.level} · C${c.constellation} · Talents ${c.talents.join(' / ') || '—'}</div></div></div>
-    ${w ? `<div class="weapon-cell">${img(w.iconUrl, '', w.name)}<span>${esc(w.name)} <span class="sub">R${w.refinement}</span></span></div>` : ''}
-    <dl class="quiz-stats">
-      <div><dt>CV</dt><dd>${c.critValue.toFixed(1)}</dd></div>
-      <div><dt>Rolls</dt><dd>${gradeBadge(c.artifactGrade)} ${c.artifactScore.toFixed(1)}</dd></div>
-      <div><dt>Crit</dt><dd>${pct(s.critRate)} / ${pct(s.critDmg)}</dd></div>
-      <div><dt>ATK</dt><dd>${int(s.atk)}</dd></div>
-      <div><dt>HP</dt><dd>${int(s.hp)}</dd></div>
-      <div><dt>EM</dt><dd>${int(s.em)}</dd></div>
-      <div><dt>ER</dt><dd>${pct(s.er)}</dd></div>
-    </dl>
-    <div class="sets">${c.artifactSets.map(esc).join(' · ') || 'No set bonus'}</div>
-  </div>`;
-}
-
-function renderQuiz() {
-  const best = readBest();
-  if (loadedPlayers().filter((p) => p.characters.length).length < 2) {
-    return emptyPanel('Need two players with showcases', 'The quiz needs at least two players with character details visible.');
-  }
-  if (!quiz.round) {
-    return `<div class="panel quiz-start">
-      <h2>Guess the owner</h2>
-      <p class="muted">${QUIZ_ROUNDS} rounds. You'll see an artifact or a build with the owner hidden. Who does it belong to?</p>
-      ${best ? `<p>Your best: <b>${best}/${QUIZ_ROUNDS}</b></p>` : ''}
-      <button class="btn primary" type="button" data-action="quiz-start">Start</button></div>`;
-  }
-  if (quiz.finished) {
-    const verdict = quiz.score >= 9 ? 'You know your friends\' accounts better than they do.'
-      : quiz.score >= 6 ? 'Solid. You\'ve clearly been peeking at their profiles.'
-      : quiz.score >= 3 ? 'Not bad, but some of those were guesses.' : 'Do you even talk to these people?';
-    return `<div class="panel quiz-start">
-      <h2>${quiz.score}/${QUIZ_ROUNDS}</h2><p>${verdict}</p>
-      <p class="muted">Best: ${best}/${QUIZ_ROUNDS}</p>
-      <button class="btn primary" type="button" data-action="quiz-start">Play again</button></div>`;
-  }
-
-  const q = quiz.question;
-  const answered = quiz.answer != null;
-  const correct = answered && quiz.answer === q.p.uid;
-  const prompt = q.type === 'artifact' ? 'Whose artifact is this?' : `Whose ${esc(q.c.name)} is this?`;
-  const shown = q.type === 'artifact'
-    ? `<div class="quiz-artifact">${artifactCard(q.a)}</div>`
-    : quizBuildCard(q.c);
-
-  return `<div class="quiz-bar"><span>Round <b>${quiz.round}</b>/${QUIZ_ROUNDS}</span>
-      <span>Score <b>${quiz.score}</b></span><span>Streak <b>${quiz.streak}</b>${quiz.streak >= 3 ? ' 🔥' : ''}</span></div>
-    <h2 class="quiz-prompt">${prompt}</h2>
-    ${shown}
-    <div class="quiz-options">${q.options.map((p) => {
-      const cls = !answered ? '' : p.uid === q.p.uid ? 'right' : p.uid === quiz.answer ? 'wrong' : 'dim';
-      return `<button type="button" class="quiz-option ${cls}" data-action="quiz-answer" data-uid="${esc(p.uid)}" ${answered ? 'disabled' : ''}>
-        ${img(p.avatarUrl, 'pfp')}<span class="name">${esc(playerName(p))}</span></button>`;
-    }).join('')}</div>
-    ${answered ? `<div class="quiz-result ${correct ? 'right' : 'wrong'}">
-        <span>${correct ? 'Correct!' : 'Nope.'} It's ${esc(playerName(q.p))}'s ${esc(q.c.name)}${q.type === 'artifact' ? ` ${esc(q.a.slot.toLowerCase())}` : ''}.</span>
-        <button class="btn primary" type="button" data-action="quiz-next">${quiz.round >= QUIZ_ROUNDS ? 'See results' : 'Next'}</button></div>` : ''}`;
-}
-
-function answerQuiz(uid) {
-  if (quiz.answer != null || !quiz.question) return;
-  quiz.answer = uid;
-  if (uid === quiz.question.p.uid) { quiz.score++; quiz.streak++; } else { quiz.streak = 0; }
-}
-
-function nextQuiz() {
-  if (quiz.round >= QUIZ_ROUNDS) {
-    quiz.finished = true;
-    if (quiz.score > readBest()) saveBest(quiz.score);
-    return;
-  }
-  quiz.round++;
-  quiz.answer = null;
-  quiz.question = newQuestion();
-}
-
 /* ---------- rendering ---------- */
 
 const TABS = {
@@ -613,7 +496,6 @@ const TABS = {
   artifacts: renderArtifacts,
   h2h: renderHeadToHead,
   awards: renderAwards,
-  quiz: renderQuiz,
 };
 
 function render() {
@@ -675,9 +557,6 @@ view.addEventListener('click', async (e) => {
     case 'char-sort': state.charSort = id; break;
     case 'open-char': state.tab = 'characters'; state.character = name; break;
     case 'swap': [state.h2hA, state.h2hB] = [state.h2hB, state.h2hA]; break;
-    case 'quiz-start': startQuiz(); break;
-    case 'quiz-answer': answerQuiz(uid); break;
-    case 'quiz-next': nextQuiz(); break;
     case 'remove':
       if (!confirm(`Remove ${name} from the leaderboard?`)) return;
       try {

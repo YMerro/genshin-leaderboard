@@ -1,5 +1,10 @@
 package dev.genshinboard.enka;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.MissingNode;
 
@@ -66,6 +71,34 @@ public final class GameData {
 
     public String namecardUrl(int namecardId) {
         return asset(namecards.path(String.valueOf(namecardId)).path("Icon").asText(null));
+    }
+
+    /** Basic facts about one playable character, for trivia. */
+    public record CharacterInfo(int id, String name, String element, String weaponType, int rarity, String iconUrl) {}
+
+    private static final Map<String, String> ELEMENTS = Map.of(
+            "Fire", "Pyro", "Water", "Hydro", "Wind", "Anemo", "Electric", "Electro",
+            "Grass", "Dendro", "Ice", "Cryo", "Rock", "Geo");
+    private static final Map<String, String> WEAPONS = Map.of(
+            "WEAPON_SWORD_ONE_HAND", "Sword", "WEAPON_CLAYMORE", "Claymore", "WEAPON_POLE", "Polearm",
+            "WEAPON_BOW", "Bow", "WEAPON_CATALYST", "Catalyst");
+
+    /** Every named character in the game data except the Traveler, sorted by name. */
+    public List<CharacterInfo> characters() {
+        List<CharacterInfo> list = new ArrayList<>();
+        avatars.fields().forEachRemaining(e -> {
+            JsonNode a = e.getValue();
+            if (e.getKey().contains("-") || e.getKey().equals("10000005") || e.getKey().equals("10000007")) return;
+            String name = text(a.path("NameTextMapHash").asText(), null);
+            String element = ELEMENTS.get(a.path("Element").asText());
+            String weapon = WEAPONS.get(a.path("WeaponType").asText());
+            if (name == null || element == null || weapon == null) return;
+            int rarity = a.path("QualityType").asText().startsWith("QUALITY_ORANGE") ? 5 : 4;
+            list.add(new CharacterInfo(Integer.parseInt(e.getKey()), name, element, weapon, rarity,
+                    asset(a.path("SideIconName").asText(null))));
+        });
+        list.sort(Comparator.comparing(CharacterInfo::name));
+        return list;
     }
 
     /** Accepts either a store path ("/ui/X.png") or a bare icon name from the API ("UI_EquipIcon_X"). */

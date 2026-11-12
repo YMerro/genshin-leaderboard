@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import dev.genshinboard.enka.EnkaException;
+import dev.genshinboard.enka.GameData;
+import dev.genshinboard.enka.GameDataLoader;
 import dev.genshinboard.friends.Friend;
 import dev.genshinboard.friends.FriendStore;
 import dev.genshinboard.history.HistoryStore;
@@ -36,11 +38,13 @@ public class ApiController {
     private final LeaderboardService leaderboard;
     private final FriendStore friends;
     private final HistoryStore history;
+    private final GameDataLoader gameData;
 
-    public ApiController(LeaderboardService leaderboard, FriendStore friends, HistoryStore history) {
+    public ApiController(LeaderboardService leaderboard, FriendStore friends, HistoryStore history, GameDataLoader gameData) {
         this.leaderboard = leaderboard;
         this.friends = friends;
         this.history = history;
+        this.gameData = gameData;
     }
 
     public record AddFriendRequest(String uid, String label) {}
@@ -55,6 +59,12 @@ public class ApiController {
     @GetMapping("/friends")
     public List<Friend> friends() {
         return friends.list();
+    }
+
+    /** Every playable character's name, element, weapon type, rarity and icon (for quiz trivia). */
+    @GetMapping("/characters")
+    public List<GameData.CharacterInfo> characters() {
+        return gameData.get().characters();
     }
 
     /** Daily snapshots for every saved player, keyed by UID. */
