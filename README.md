@@ -104,6 +104,17 @@ powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\GenshinLeaderboard\sto
 - Don't end it from Task Manager: while it's running it restarts itself after a crash, so it would come back after 15 seconds. `stop.ps1` stops it for good.
 - Nothing here changes auto-start: with auto-start disabled, the app stays off after a restart until you run `start.ps1` again.
 
+### Desktop shortcuts
+
+Double-click instead of typing commands:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\windows\shortcuts.ps1 create   # Start / Stop / Open Leaderboard on the Desktop
+powershell -ExecutionPolicy Bypass -File scripts\windows\shortcuts.ps1 remove
+```
+
+The shortcuts are created on each PC, not stored in git, because they contain paths specific to that user. They don't touch auto-start.
+
 ### Auto-start at sign-in
 
 Off by default. Turn it on or off per PC with:
