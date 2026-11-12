@@ -72,6 +72,7 @@ jobs:
           curl -fsS http://localhost:8081/ | grep -qi leaderboard
           curl -fsS http://localhost:8081/api/friends
       - name: Show pod logs on failure
+        continue-on-error: true
         if: failure()
         run: |
           kubectl -n leaderboard get pods,pvc,events
