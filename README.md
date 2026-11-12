@@ -1,13 +1,13 @@
 # Genshin Friends Leaderboard
 
-A small web app that ranks you and your friends by Genshin Impact profile stats, using the public [Enka.Network API](https://api.enka.network). Add players by UID; no login needed.
+A small web app that ranks you and your friends by Genshin Impact profile stats, using the public [Enka.Network API](https://api.enka.network). Add players by UID. Anyone with the link can view; adding or removing players needs the [admin password](#admin-password).
 
 - **Players tab:** rank by Spiral Abyss, Imaginarium Theater, Adventure Rank, achievements or best crit value. Click a player to see their showcase characters.
 - **Characters tab:** compare everyone's builds side by side, overall or for one character, ranked by roll score, crit value, ATK, HP, DEF, EM, Energy Recharge, crit rate, crit DMG or DMG bonus. Click a build to see its 5 artifacts.
 - **Artifacts tab:** Hall of Fame (best rolled +20 artifacts in the group) and Hall of Shame (fewest useful rolls).
 - **Head-to-head tab:** pick two players and compare profile stats and shared characters, with a running score.
 - **Awards tab:** 14 auto-awarded titles (Crit Goblin, Roll God, Hall of Shame Regular, Battery, Whale Suspect, Book Hoarder…) with runners-up. Winners' titles also show under their name on the Players tab. Needs 2+ players.
-- **Quiz tab:** 10 random questions per game in four modes: *Mixed*, *Guess the owner* (whose artifact/build is this), *Account trivia* (who has the higher Abyss/AR/CV, which weapon or set someone's character uses, constellations, signatures, plus wish questions like last 5★, 50/50 results and pity when wishes are imported) and *Lore & fun facts* (titles, redacted character bios, birthdays, affiliations, star constellations, constellation and talent names, specialty dishes, voice actors and weapon descriptions from [genshin-db](https://github.com/theBowja/genshin-db), leaning toward characters your group owns, plus ~45 hand-written easter eggs) and *Icon quiz* (whose skill/burst/passive/constellation icon is this, what is it called, what kind of talent is it, plus weapon icons, artifact pieces and character name cards). Question types rotate, nothing repeats within a game, answers are shuffled, and each answer shows the real values. Best score per mode is kept in this browser.
+- **Quiz tab:** 10 random questions per game in five modes: *Mixed*, *Guess the owner* (whose artifact/build is this), *Account trivia* (who has the higher Abyss/AR/CV, which weapon or set someone's character uses, constellations, signatures, plus wish questions like last 5★, 50/50 results and pity when wishes are imported), *Lore & fun facts* (titles, redacted character bios, birthdays, affiliations, star constellations, constellation and talent names, specialty dishes, voice actors and weapon descriptions from [genshin-db](https://github.com/theBowja/genshin-db), leaning toward characters your group owns, plus ~45 hand-written easter eggs) and *Icon quiz* (whose skill/burst/passive/constellation icon is this, what is it called, what kind of talent is it, plus weapon icons, artifact pieces and character name cards). Question types rotate, nothing repeats within a game, answers are shuffled, and each answer shows the real values. Best score per mode is kept in this browser.
 
 - **Tier list tab:** characters ranked into SS–D tiers by the group's average roll score or crit value.
 - **Flex tab:** 5★ constellations, refinements, C6/R5 counts and each player's rarest character.
@@ -49,7 +49,42 @@ mvn spring-boot:run
 
 Then open http://localhost:8081. Stop it with **Ctrl+C**.
 
-The first page load downloads about 2 MB of game data (character names, icons and so on) into `data/store/` and refreshes it once a day.
+The first page load downloads about 2 MB of game data (character names, icons and so on) into `data/store/` and refreshes it once a day. The quiz's lore data comes from genshin-db and is cached in `data/lore/` for a week.
+
+To add or remove players during development, give it a password: `mvn spring-boot:run -Dspring-boot.run.arguments=--app.admin.password=dev`.
+
+## Admin password
+
+Viewing everything is open to anyone with the link, and so are wish imports (one at a time, so nobody can flood HoYoverse). These need the admin password:
+
+- adding and removing players
+- deleting saved wish history
+
+Click **Admin** in the page header (or just try one of those actions) and enter the password. It's remembered in that browser; click **Admin ✓** to log out. After 20 wrong passwords in 10 minutes, admin actions are locked for 10 minutes.
+
+Set the password **outside the repo**, as `app.admin.password` in `config/application.properties` next to the jar (the installer below does this), or with the `APP_ADMIN_PASSWORD` environment variable. With no password set, admin actions are disabled.
+
+## Run in the background on Windows
+
+```powershell
+mvn package
+powershell -ExecutionPolicy Bypass -File scripts\windows\install.ps1
+```
+
+This sets up `%USERPROFILE%\GenshinLeaderboard`:
+
+| Path | |
+|---|---|
+| `app\genshin-leaderboard.jar` | The app |
+| `config\application.properties` | Data folder, port and a **generated admin password** (open the file to see it) |
+| `data\` | Friends, history, wishes and lore. Copied from the project's `data\` the first time. **Back this up.** |
+| `logs\` | `app.log` (rotated) and `launcher.log` |
+| `start.ps1` / `stop.ps1` | Start in the background (restarts itself if it crashes) / stop |
+| `update.ps1` | Rebuild from the project and restart; data and settings are kept |
+
+A shortcut in the Windows Startup folder starts it hidden at every login. Running it again is safe: existing data and settings are kept. Don't run `mvn spring-boot:run` at the same time, since both use port 8081.
+
+To make it reachable from the internet, a tunnel such as [Tailscale Funnel](https://tailscale.com/kb/1223/funnel) (free, stable HTTPS address) can point at port 8081. Only do this on a PC you own and are allowed to expose; not on a work computer.
 
 ## Notes
 
@@ -61,15 +96,20 @@ The first page load downloads about 2 MB of game data (character names, icons an
 
 ## API
 
+🔒 = needs the admin password in the `X-Admin-Password` header.
+
 | Method | Path | |
 |---|---|---|
 | GET | `/api/leaderboard` | All players with stats and builds |
 | GET | `/api/friends` | Saved UIDs |
-| POST | `/api/friends` | Add `{"uid": "712345678", "label": "Sam"}`; checks the UID exists first |
-| DELETE | `/api/friends/{uid}` | Remove a player |
+| POST 🔒 | `/api/friends` | Add `{"uid": "712345678", "label": "Sam"}`; checks the UID exists first |
+| DELETE 🔒 | `/api/friends/{uid}` | Remove a player |
 | GET | `/api/history` | Daily snapshots per player |
 | GET | `/api/wishes` | Wish stats for every imported account |
-| POST | `/api/wishes/import` | Import `{"url": "<wish history link>"}` |
-| DELETE | `/api/wishes/{uid}` | Delete an account's saved wishes |
+| POST | `/api/wishes/import` | Import `{"url": "<wish history link>"}` (one at a time) |
+| DELETE 🔒 | `/api/wishes/{uid}` | Delete an account's saved wishes |
+| GET | `/api/characters` | Name, element, weapon, rarity and icon of every playable character |
+| GET | `/api/lore` | Character and weapon lore used by the quiz |
+| GET 🔒 | `/api/admin/check` | Returns 204 if the password is right |
 
-Settings (port, cache times, data folder) are in `src/main/resources/application.properties`.
+Default settings (port, cache times, data folder) are in `src/main/resources/application.properties`; override them in `config/application.properties` next to the jar.
