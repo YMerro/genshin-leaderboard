@@ -1,0 +1,24 @@
+# Home cluster: the app + a Cloudflare Tunnel for internet access + nightly data backups.
+# Before applying, create the two secrets (see docs/home-cluster.md):
+#   leaderboard-admin  (key: password)  - admin password
+#   cloudflared-token  (key: token)     - Cloudflare Tunnel token
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: leaderboard
+resources:
+  - namespace.yaml
+  - ../../base
+  - cloudflared.yaml
+  - backup.yaml
+images:
+  - name: ghcr.io/ymerro/genshin-leaderboard
+    newTag: latest
+patches:
+  # Always re-pull :latest on restart so "rollout restart" picks up new versions
+  - target:
+      kind: Deployment
+      name: leaderboard
+    patch: |
+      - op: add
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always

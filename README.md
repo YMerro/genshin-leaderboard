@@ -153,6 +153,7 @@ kubectl -n leaderboard port-forward svc/leaderboard 8081:80
 - One replica with a `Recreate` strategy and a 1 Gi PVC on `/data`: the data is JSON files and the daily snapshot is an in-app job, so two pods must never run at once. Scaling out would need a database first.
 - Hardened pod: non-root, read-only root filesystem, no capabilities, startup/liveness/readiness probes, memory limit with `MaxRAMPercentage`.
 - `base/ingress.example.yaml` is a template for exposing it with an ingress controller.
+- **Home cluster with internet access** (k3d + Cloudflare Tunnel + nightly backups): step-by-step guide in [docs/home-cluster.md](docs/home-cluster.md), manifests in `deploy/k8s/overlays/home`.
 
 **CI** (`.github/workflows/ci.yml`): on every push it runs the tests, lints the Dockerfile (hadolint) and renders the manifests, builds the image, scans it with Trivy, deploys it to a throwaway **kind** cluster and checks the health endpoints. On `main` it then pushes `ghcr.io/ymerro/genshin-leaderboard:latest` and `:sha-<commit>`.
 

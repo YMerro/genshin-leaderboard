@@ -1,0 +1,61 @@
+# Nightly copy of /data into its own volume, keeping the last 14 archives.
+# Restore: see docs/home-cluster.md.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: leaderboard-backups
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: leaderboard-backup
+spec:
+  schedule: "30 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: backup
+              image: busybox:1.37
+              command:
+                - sh
+                - -c
+                - |
+                  set -e
+                  f=/backups/leaderboard-$(date +%Y%m%d-%H%M%S).tar.gz
+                  tar czf "$f" -C /data --exclude=./store --exclude=./lore .
+                  echo "wrote $f ($(du -h "$f" | cut -f1))"
+                  ls -1t /backups/leaderboard-*.tar.gz | tail -n +15 | xargs -r rm -f
+              volumeMounts:
+                - { name: data, mountPath: /data, readOnly: true }
+                - { name: backups, mountPath: /backups }
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+          volumes:
+            - name: data
+              persistentVolumeClaim:
+                claimName: leaderboard-data
+            - name: backups
+              persistentVolumeClaim:
+                claimName: leaderboard-backups

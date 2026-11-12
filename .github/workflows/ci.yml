@@ -35,6 +35,7 @@ jobs:
         run: |
           kubectl kustomize deploy/k8s/base > /dev/null
           kubectl kustomize deploy/k8s/overlays/kind > /dev/null
+          kubectl kustomize deploy/k8s/overlays/home > /dev/null
 
   image:
     needs: [test, lint]
