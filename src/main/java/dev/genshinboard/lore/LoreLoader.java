@@ -24,7 +24,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dev.genshinboard.config.AppProperties;
+import dev.genshinboard.lore.Lore.ArtifactPieceLore;
+import dev.genshinboard.lore.Lore.ArtifactSetLore;
 import dev.genshinboard.lore.Lore.CharacterLore;
+import dev.genshinboard.lore.Lore.IconLore;
 import dev.genshinboard.lore.Lore.WeaponLore;
 
 /**
@@ -62,7 +65,8 @@ public class LoreLoader {
         if (lore == null) {
             lore = readCache();
         }
-        boolean stale = lore.fetchedAt() == null || lore.fetchedAt().isBefore(Instant.now().minus(REFRESH_AFTER));
+        boolean stale = lore.fetchedAt() == null || lore.version() < Lore.CURRENT_VERSION
+                || lore.fetchedAt().isBefore(Instant.now().minus(REFRESH_AFTER));
         if (stale && lastAttempt.isBefore(Instant.now().minus(RETRY_AFTER_FAILURE))) {
             lastAttempt = Instant.now();
             try {
@@ -83,6 +87,8 @@ public class LoreLoader {
         JsonNode constellations = fetch("constellations");
         JsonNode foods = fetch("foods");
         JsonNode weapons = fetch("weapons");
+        JsonNode artifacts = fetch("artifacts");
+        JsonNode namecards = fetch("namecards");
 
         Map<String, JsonNode> talentsByName = byName(talents);
         Map<String, JsonNode> consByName = byName(constellations);
@@ -90,6 +96,22 @@ public class LoreLoader {
         for (JsonNode food : foods) {
             String who = text(food, "characterName");
             if (who != null) dishByCharacter.put(who, text(food, "name"));
+        }
+
+        // Icons used by more than one character (generic cooking/expedition perks, shared normal attacks)
+        // would make unanswerable questions, so count every icon first and keep only unique ones
+        Map<String, Integer> iconUses = new HashMap<>();
+        for (JsonNode t : talents) {
+            for (String f : List.of("combat2", "combat3", "passive1", "passive2", "passive3")) {
+                String file = text(t.path("images"), "filename_" + f);
+                if (file != null) iconUses.merge(file, 1, Integer::sum);
+            }
+        }
+        for (JsonNode k : constellations) {
+            for (int i = 1; i <= 6; i++) {
+                String file = text(k.path("images"), "filename_c" + i);
+                if (file != null) iconUses.merge(file, 1, Integer::sum);
+            }
         }
 
         List<CharacterLore> chars = new ArrayList<>();
@@ -104,11 +126,35 @@ public class LoreLoader {
                 String n = text(k.path("c" + i), "name");
                 if (n != null) cons.add(n);
             }
+            List<IconLore> icons = new ArrayList<>();
+            addIcon(icons, iconUses, "skill", t.path("combat2"), t.path("images"), "filename_combat2");
+            addIcon(icons, iconUses, "burst", t.path("combat3"), t.path("images"), "filename_combat3");
+            for (int i = 1; i <= 3; i++) {
+                addIcon(icons, iconUses, "passive", t.path("passive" + i), t.path("images"), "filename_passive" + i);
+            }
+            for (int i = 1; i <= 6; i++) {
+                addIcon(icons, iconUses, "constellation", k.path("c" + i), k.path("images"), "filename_c" + i);
+            }
             chars.add(new CharacterLore(name, text(c, "title"), text(c, "description"), text(c, "birthday"),
                     text(c, "affiliation"), text(c, "region"), text(c, "constellation"),
                     text(c.path("cv"), "english"), text(c.path("cv"), "japanese"),
                     text(t.path("combat2"), "name"), text(t.path("combat3"), "name"), text(t.path("passive3"), "name"),
-                    cons, dishByCharacter.get(name)));
+                    cons, dishByCharacter.get(name), icons, namecardFor(namecards, name)));
+        }
+
+        List<ArtifactSetLore> sets = new ArrayList<>();
+        for (JsonNode a : artifacts) {
+            // Only sets that drop at 4-5★ are ones players actually recognize
+            boolean endgame = false;
+            for (JsonNode r : a.path("rarityList")) endgame |= r.asInt() >= 4;
+            if (!endgame || text(a, "name") == null) continue;
+            List<ArtifactPieceLore> pieces = new ArrayList<>();
+            for (String slot : List.of("flower", "plume", "sands", "goblet", "circlet")) {
+                String icon = text(a.path("images"), "filename_" + slot);
+                String pieceName = text(a.path(slot), "name");
+                if (icon != null && pieceName != null) pieces.add(new ArtifactPieceLore(slot, pieceName, icon));
+            }
+            if (!pieces.isEmpty()) sets.add(new ArtifactSetLore(text(a, "name"), pieces));
         }
 
         List<WeaponLore> weaponList = new ArrayList<>();
@@ -117,10 +163,31 @@ public class LoreLoader {
             int rarity = w.path("rarity").asInt();
             // Short or generic descriptions make poor questions, and 1-2★ weapons are obscure
             if (description != null && description.length() >= 40 && rarity >= 3) {
-                weaponList.add(new WeaponLore(text(w, "name"), rarity, text(w, "weaponText"), description));
+                weaponList.add(new WeaponLore(text(w, "name"), rarity, text(w, "weaponText"), description,
+                        text(w.path("images"), "filename_icon")));
             }
         }
-        return new Lore(Instant.now(), chars, weaponList);
+        return new Lore(Lore.CURRENT_VERSION, Instant.now(), chars, weaponList, sets);
+    }
+
+    private static void addIcon(List<IconLore> icons, Map<String, Integer> uses, String kind,
+                                JsonNode talent, JsonNode images, String imageField) {
+        String name = text(talent, "name");
+        String file = text(images, imageField);
+        if (name != null && file != null && uses.getOrDefault(file, 0) == 1) {
+            icons.add(new IconLore(kind, name, file));
+        }
+    }
+
+    /** Character name cards are named "<Character>: <Card name>". */
+    private static String namecardFor(JsonNode namecards, String character) {
+        for (JsonNode n : namecards) {
+            String name = text(n, "name");
+            if (name != null && name.startsWith(character + ":")) {
+                return text(n.path("images"), "filename_background");
+            }
+        }
+        return null;
     }
 
     private JsonNode fetch(String folder) throws IOException {

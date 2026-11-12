@@ -8,10 +8,11 @@
 
 const QUIZ_ROUNDS = 10;
 const QUIZ_MODES = {
-  mixed: { label: 'Mixed', cats: ['owner', 'account', 'wishes', 'lore'] },
+  mixed: { label: 'Mixed', cats: ['owner', 'account', 'wishes', 'lore', 'icons'] },
   owner: { label: 'Guess the owner', cats: ['owner'] },
   account: { label: 'Account trivia', cats: ['account', 'wishes'] },
   lore: { label: 'Lore & fun facts', cats: ['lore'] },
+  icons: { label: 'Icon quiz', cats: ['icons'] },
 };
 
 const quiz = { mode: 'mixed', round: 0, score: 0, streak: 0, q: null, answer: null, finished: false, seen: new Set(), lastKind: null };
