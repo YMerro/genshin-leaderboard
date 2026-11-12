@@ -1,14 +1,13 @@
-# Home cluster: the app + a Cloudflare Tunnel for internet access + nightly data backups.
-# Before applying, create the two secrets (see docs/home-cluster.md):
+# Home cluster: the app + Tailscale Funnel for internet access + nightly data backups.
+# Before applying, install the Tailscale operator and create the admin secret (see docs/home-cluster.md):
 #   leaderboard-admin  (key: password)  - admin password
-#   cloudflared-token  (key: token)     - Cloudflare Tunnel token
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: leaderboard
 resources:
   - namespace.yaml
   - ../../base
-  - cloudflared.yaml
+  - ingress-tailscale.yaml
   - backup.yaml
 images:
   - name: ghcr.io/ymerro/genshin-leaderboard
