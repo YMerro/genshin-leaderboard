@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Friends Leaderboard</title>
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <h1>Friends Leaderboard</h1>
+      <p class="muted">Genshin Impact profiles and showcase builds, via Enka.Network</p>
+    </div>
+    <div class="top-actions">
+      <span id="updated" class="muted"></span>
+      <button id="refresh" class="btn" type="button">Refresh</button>
+    </div>
+  </header>
+
+  <main>
+    <form id="add-form" class="panel add-form" autocomplete="off">
+      <label>
+        <span>UID</span>
+        <input id="uid" inputmode="numeric" pattern="\d{9,10}" placeholder="e.g. 712345678" required>
+      </label>
+      <label>
+        <span>Name <small class="muted">(optional)</small></span>
+        <input id="label" maxlength="40" placeholder="Who is this?">
+      </label>
+      <button class="btn primary" type="submit">Add player</button>
+      <p id="form-msg" class="form-msg" role="status"></p>
+    </form>
+
+    <nav class="tabs" role="tablist">
+      <button role="tab" type="button" data-tab="players" aria-selected="true">Players</button>
+      <button role="tab" type="button" data-tab="characters" aria-selected="false">Characters</button>
+      <button role="tab" type="button" data-tab="artifacts" aria-selected="false">Artifacts</button>
+      <button role="tab" type="button" data-tab="h2h" aria-selected="false">Head-to-head</button>
+      <button role="tab" type="button" data-tab="awards" aria-selected="false">Awards</button>
+      <button role="tab" type="button" data-tab="quiz" aria-selected="false">Quiz</button>
+      <button role="tab" type="button" data-tab="tiers" aria-selected="false">Tier list</button>
+      <button role="tab" type="button" data-tab="flex" aria-selected="false">Flex</button>
+      <button role="tab" type="button" data-tab="progress" aria-selected="false">Progress</button>
+      <button role="tab" type="button" data-tab="wishes" aria-selected="false">Wishes</button>
+    </nav>
+
+    <section id="view" aria-live="polite"></section>
+
+    <p class="foot muted">
+      Players need characters in their in-game showcase with <b>Show Character Details</b> turned on.
+      Crit value = 2 × Crit Rate + Crit DMG from artifact substats.
+      Abyss and Theater show the current period's progress.
+    </p>
+  </main>
+
+  <dialog id="card-dialog" aria-label="Build card">
+    <div class="dialog-body">
+      <canvas id="card-canvas" width="1200" height="675"></canvas>
+      <div class="dialog-actions">
+        <button class="btn primary" type="button" data-card="download">Download PNG</button>
+        <button class="btn" type="button" data-card="share" id="card-share">Share…</button>
+        <button class="btn" type="button" data-card="copy" id="card-copy">Copy image</button>
+        <button class="btn" type="button" data-card="close">Close</button>
+      </div>
+      <p id="card-msg" class="muted small" role="status"></p>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+  <script src="insights.js"></script>
+  <script src="wishes.js"></script>
+</body>
+</html>
