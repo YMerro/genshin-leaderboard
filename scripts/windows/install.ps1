@@ -1,11 +1,13 @@
-# Installs the Friends Leaderboard to run in the background on Windows, starting at login.
+# Installs the Friends Leaderboard to run in the background on Windows.
 #
-#   powershell -ExecutionPolicy Bypass -File scripts\windows\install.ps1
+#   powershell -ExecutionPolicy Bypass -File scripts\windows\install.ps1             # install and start
+#   powershell -ExecutionPolicy Bypass -File scripts\windows\install.ps1 -AutoStart  # ...and start at every sign-in
 #
 # Creates %USERPROFILE%\GenshinLeaderboard with the app, a config file holding a generated admin
-# password, a data folder (copied from the project's data\ the first time), start/stop/update
-# scripts and a Startup-folder shortcut. Safe to run again: existing data and config are kept.
-param([string]$Target = "$env:USERPROFILE\GenshinLeaderboard")
+# password, a data folder (copied from the project's data\ the first time) and start/stop/update
+# scripts. Auto-start is off unless you pass -AutoStart; turn it on or off later with autostart.ps1.
+# Safe to run again: existing data and config are kept.
+param([string]$Target = "$env:USERPROFILE\GenshinLeaderboard", [switch]$AutoStart)
 $ErrorActionPreference = 'Stop'
 $project = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $jar = Join-Path $project 'target\genshin-leaderboard-0.0.1-SNAPSHOT.jar'
@@ -39,13 +41,8 @@ logging.logback.rollingpolicy.max-history=7
     Write-Host "Generated an admin password in $config"
 }
 
-$shell = New-Object -ComObject WScript.Shell
-$lnk = $shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Startup')) 'Friends Leaderboard.lnk'))
-$lnk.TargetPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
-$lnk.Arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$Target\start.ps1`""
-$lnk.WorkingDirectory = $Target
-$lnk.WindowStyle = 7
-$lnk.Save()
+if ($AutoStart) { & (Join-Path $PSScriptRoot 'autostart.ps1') enable -Target $Target }
 
 Start-Process powershell -ArgumentList '-NoProfile', '-WindowStyle', 'Hidden', '-ExecutionPolicy', 'Bypass', '-File', "$Target\start.ps1" -WindowStyle Hidden
-Write-Host "Installed to $Target. It starts at every login; open http://localhost:8081 in ~15 seconds."
+Write-Host "Installed to $Target and started; open http://localhost:8081 in ~15 seconds."
+if (-not $AutoStart) { Write-Host 'Auto-start at sign-in is off. Turn it on with: scripts\windows\autostart.ps1 enable' }

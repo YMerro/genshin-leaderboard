@@ -82,7 +82,19 @@ This sets up `%USERPROFILE%\GenshinLeaderboard`:
 | `start.ps1` / `stop.ps1` | Start in the background (restarts itself if it crashes) / stop |
 | `update.ps1` | Rebuild from the project and restart; data and settings are kept |
 
-A shortcut in the Windows Startup folder starts it hidden at every login. Running it again is safe: existing data and settings are kept. Don't run `mvn spring-boot:run` at the same time, since both use port 8081.
+Running the installer again is safe: existing data and settings are kept. Don't run `mvn spring-boot:run` on port 8081 at the same time; use `--server.port=8082` for a development copy.
+
+### Auto-start at sign-in
+
+Off by default. Turn it on or off per PC with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\windows\autostart.ps1 enable    # start at every Windows sign-in
+powershell -ExecutionPolicy Bypass -File scripts\windows\autostart.ps1 disable   # stop doing that
+powershell -ExecutionPolicy Bypass -File scripts\windows\autostart.ps1 status    # check
+```
+
+It only adds or removes a shortcut in your Startup folder; it doesn't start or stop the app right now (use `start.ps1` / `stop.ps1` for that). You can also pass `-AutoStart` to `install.ps1`.
 
 To make it reachable from the internet, a tunnel such as [Tailscale Funnel](https://tailscale.com/kb/1223/funnel) (free, stable HTTPS address) can point at port 8081. Only do this on a PC you own and are allowed to expose; not on a work computer.
 
