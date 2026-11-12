@@ -24,6 +24,8 @@ import dev.genshinboard.friends.Friend;
 import dev.genshinboard.friends.FriendStore;
 import dev.genshinboard.history.HistoryStore;
 import dev.genshinboard.history.Snapshot;
+import dev.genshinboard.lore.Lore;
+import dev.genshinboard.lore.LoreLoader;
 import dev.genshinboard.leaderboard.LeaderboardService;
 import dev.genshinboard.leaderboard.LeaderboardService.Leaderboard;
 import dev.genshinboard.leaderboard.PlayerSummary;
@@ -39,12 +41,15 @@ public class ApiController {
     private final FriendStore friends;
     private final HistoryStore history;
     private final GameDataLoader gameData;
+    private final LoreLoader lore;
 
-    public ApiController(LeaderboardService leaderboard, FriendStore friends, HistoryStore history, GameDataLoader gameData) {
+    public ApiController(LeaderboardService leaderboard, FriendStore friends, HistoryStore history,
+                         GameDataLoader gameData, LoreLoader lore) {
         this.leaderboard = leaderboard;
         this.friends = friends;
         this.history = history;
         this.gameData = gameData;
+        this.lore = lore;
     }
 
     public record AddFriendRequest(String uid, String label) {}
@@ -65,6 +70,12 @@ public class ApiController {
     @GetMapping("/characters")
     public List<GameData.CharacterInfo> characters() {
         return gameData.get().characters();
+    }
+
+    /** Character and weapon lore for quiz trivia (titles, bios, talents, dishes, voice actors…). */
+    @GetMapping("/lore")
+    public Lore lore() {
+        return lore.get();
     }
 
     /** Daily snapshots for every saved player, keyed by UID. */

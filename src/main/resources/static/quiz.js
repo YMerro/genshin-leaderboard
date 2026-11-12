@@ -2,7 +2,7 @@
 /*
  * Quiz: randomized questions built from the group's real data.
  * Categories: owner (whose artifact/build), account (profile and build trivia),
- * wishes (imported wish history), lore (element/weapon/rarity/appearance from game data).
+ * wishes (imported wish history), lore (character/weapon lore and fun facts, see quiz-lore.js).
  * Uses helpers from app.js and the wish loader from wishes.js.
  */
 
@@ -11,13 +11,11 @@ const QUIZ_MODES = {
   mixed: { label: 'Mixed', cats: ['owner', 'account', 'wishes', 'lore'] },
   owner: { label: 'Guess the owner', cats: ['owner'] },
   account: { label: 'Account trivia', cats: ['account', 'wishes'] },
-  lore: { label: 'Game trivia', cats: ['lore'] },
+  lore: { label: 'Lore & fun facts', cats: ['lore'] },
 };
-const ELEMENTS = ['Pyro', 'Hydro', 'Anemo', 'Electro', 'Dendro', 'Cryo', 'Geo'];
-const WEAPON_TYPES = ['Sword', 'Claymore', 'Polearm', 'Bow', 'Catalyst'];
 
 const quiz = { mode: 'mixed', round: 0, score: 0, streak: 0, q: null, answer: null, finished: false, seen: new Set(), lastKind: null };
-Object.assign(state, { allChars: null, allCharsLoading: false });
+Object.assign(state, { allChars: null, allCharsLoading: false, lore: null, loreLoading: false });
 
 /* ---------- helpers ---------- */
 
@@ -199,54 +197,6 @@ const GENERATORS = [
       explain: `Pity ${f.pity} on the ${b.name} banner.` };
   } },
 
-  /* ----- lore (game data) ----- */
-  { kind: 'element-of', cat: 'lore', weight: 3, make(ctx) {
-    const c = ctx.loreChar();
-    if (!c) return null;
-    return { key: `el:${c.name}`, prompt: `What element is ${esc(c.name)}?`, visual: charIcon(c),
-      options: choices(c.element, ELEMENTS), answer: c.element, explain: `${c.name} is ${c.element}.` };
-  } },
-  { kind: 'weapon-type-of', cat: 'lore', weight: 3, make(ctx) {
-    const c = ctx.loreChar();
-    if (!c) return null;
-    return { key: `wt:${c.name}`, prompt: `What weapon type does ${esc(c.name)} use?`, visual: charIcon(c),
-      options: choices(c.weaponType, WEAPON_TYPES), answer: c.weaponType, explain: `${c.name} wields a ${c.weaponType.toLowerCase()}.` };
-  } },
-  { kind: 'rarity-of', cat: 'lore', weight: 2, make(ctx) {
-    const c = ctx.loreChar();
-    if (!c) return null;
-    return { key: `ra:${c.name}`, prompt: `Is ${esc(c.name)} a 4★ or a 5★ character?`, visual: charIcon(c),
-      options: [{ id: '4', label: '4★' }, { id: '5', label: '5★' }], answer: String(c.rarity), explain: `${c.name} is ${c.rarity}★.` };
-  } },
-  { kind: 'who-is-this', cat: 'lore', weight: 3, make(ctx) {
-    const c = ctx.loreChar();
-    if (!c) return null;
-    const similar = (state.allChars || []).filter((x) => x.element === c.element || x.weaponType === c.weaponType);
-    return { key: `wh:${c.name}`, prompt: 'Who is this?', visual: charIcon(c),
-      options: choices(c.name, similar.map((x) => x.name)), answer: c.name, explain: `${c.name}: ${c.rarity}★ ${c.element} ${c.weaponType}.` };
-  } },
-  { kind: 'odd-element', cat: 'lore', weight: 2, make() {
-    const all = state.allChars || [];
-    const element = pick(ELEMENTS);
-    const same = all.filter((c) => c.element === element);
-    const odd = pick(all.filter((c) => c.element !== element));
-    if (same.length < 3 || !odd) return null;
-    const opts = shuffle([...sample(same, 3), odd]);
-    return { key: `oe:${element}:${opts.map((c) => c.name).sort()}`, prompt: `Which of these is NOT a ${element} character?`,
-      options: opts.map((c) => ({ id: c.name, label: c.name, img: c.iconUrl })), answer: odd.name,
-      explain: `${odd.name} is ${odd.element}; the others are ${element}.` };
-  } },
-  { kind: 'which-uses', cat: 'lore', weight: 2, make() {
-    const all = state.allChars || [];
-    const weapon = pick(WEAPON_TYPES);
-    const yes = pick(all.filter((c) => c.weaponType === weapon));
-    const no = all.filter((c) => c.weaponType !== weapon);
-    if (!yes || no.length < 3) return null;
-    const opts = shuffle([yes, ...sample(no, 3)]);
-    return { key: `wu:${weapon}:${opts.map((c) => c.name).sort()}`, prompt: `Which of these characters uses a ${weapon.toLowerCase()}?`,
-      options: opts.map((c) => ({ id: c.name, label: c.name, img: c.iconUrl })), answer: yes.name,
-      explain: opts.map((c) => `${c.name}: ${c.weaponType}`).join(' · ') };
-  } },
 ];
 
 /* ---------- game flow ---------- */
@@ -257,12 +207,17 @@ function quizContext() {
   const builds = withChars.flatMap((p) => p.characters.map((c) => ({ p, c })));
   const ownerCount = new Map();
   for (const p of withChars) for (const n of new Set(p.characters.map((c) => c.name))) ownerCount.set(n, (ownerCount.get(n) || 0) + 1);
-  const owned = (state.allChars || []).filter((c) => ownerCount.has(c.name));
+  const loreChars = state.lore?.characters || [];
+  const owned = loreChars.filter((c) => ownerCount.has(c.name));
   return {
     players, withChars, builds, ownerCount,
     wishAccounts: state.wishes || [],
     // Lore leans toward characters the group actually owns, so questions feel familiar
-    loreChar: () => (owned.length && Math.random() < 0.6 ? pick(owned) : pick(state.allChars || [])),
+    loreChars,
+    loreChar: (ok = () => true) => {
+      const mine = owned.filter(ok);
+      return mine.length && Math.random() < 0.6 ? pick(mine) : pick(loreChars.filter(ok));
+    },
   };
 }
 
@@ -348,9 +303,18 @@ async function loadAllChars() {
   if (state.tab === 'quiz') render();
 }
 
+async function loadLore() {
+  state.loreLoading = true;
+  // The first load downloads the lore database on the server, which can take a few seconds
+  try { state.lore = await api('/api/lore'); } catch { state.lore = { characters: [], weapons: [] }; }
+  state.loreLoading = false;
+  if (state.tab === 'quiz') render();
+}
+
 function renderQuiz() {
-  if (!state.allChars) {
-    if (!state.allCharsLoading) loadAllChars();
+  if (!state.allChars || !state.lore) {
+    if (!state.allChars && !state.allCharsLoading) loadAllChars();
+    if (!state.lore && !state.loreLoading) loadLore();
     if (!state.wishes && !state.wishesLoading && !state.wishesError) loadWishes();
     return '<div class="panel empty">Loading quiz…</div>';
   }
