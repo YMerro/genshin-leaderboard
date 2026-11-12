@@ -54,13 +54,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Scan image (Trivy)
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: ${{ env.IMAGE }}:ci
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
-          exit-code: '0'   # report only; switch to '1' to fail the build
+      - name: Scan image (Trivy, report only)
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.58.1 \n            image --severity CRITICAL,HIGH --ignore-unfixed --exit-code 0 "$IMAGE:ci"
 
       - name: Smoke test in kind
         uses: helm/kind-action@v1
