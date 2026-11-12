@@ -40,13 +40,70 @@ const avgRollScore = (p) => (p.characters.length
   : -1);
 const gradeBadge = (grade) => (grade ? `<span class="grade grade-${grade.toLowerCase()}">${grade}</span>` : '');
 
-async function api(path, options = {}) {
-  const res = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...options });
+/* Admin password: remembered in this browser only, sent with requests so admin actions work. */
+const ADMIN_KEY = 'adminPassword';
+const getAdminPassword = () => { try { return localStorage.getItem(ADMIN_KEY) || ''; } catch { return ''; } };
+const setAdminPassword = (v) => {
+  try { if (v) localStorage.setItem(ADMIN_KEY, v); else localStorage.removeItem(ADMIN_KEY); } catch { /* storage unavailable */ }
+  updateAdminButton();
+};
+
+async function api(path, options = {}, retried = false) {
+  const headers = { 'Content-Type': 'application/json' };
+  const password = getAdminPassword();
+  if (password) headers['X-Admin-Password'] = password;
+  const res = await fetch(path, { ...options, headers });
+  // An admin action without (or with an outdated) password: ask once, then retry
+  if (res.status === 401 && !retried) {
+    if (await askAdminPassword()) return api(path, options, true);
+    throw new Error('This needs the admin password.');
+  }
   if (res.status === 204) return null;
   const body = await res.json().catch(() => null);
   if (!res.ok) throw new Error(body?.error || `Request failed (HTTP ${res.status})`);
   return body;
 }
+
+const adminBtn = document.getElementById('admin-btn');
+const adminDialog = document.getElementById('admin-dialog');
+
+function updateAdminButton() {
+  const on = Boolean(getAdminPassword());
+  adminBtn.textContent = on ? 'Admin ✓' : 'Admin';
+  adminBtn.title = on ? 'Admin mode is on in this browser. Click to log out.' : 'Log in to add or remove players';
+  adminBtn.classList.toggle('on', on);
+}
+
+/** Shows the password dialog; resolves true once a correct password is saved, false if cancelled. */
+function askAdminPassword() {
+  const input = document.getElementById('admin-password');
+  const msg = document.getElementById('admin-msg');
+  input.value = '';
+  msg.textContent = '';
+  adminDialog.showModal();
+  return new Promise((resolve) => {
+    const finish = (ok) => { adminDialog.close(); adminDialog.onsubmit = null; adminDialog.oncancel = null; resolve(ok); };
+    adminDialog.oncancel = () => finish(false);
+    document.getElementById('admin-cancel').onclick = () => finish(false);
+    adminDialog.onsubmit = async (e) => {
+      e.preventDefault();
+      msg.textContent = 'Checking…';
+      const res = await fetch('/api/admin/check', { headers: { 'X-Admin-Password': input.value } }).catch(() => null);
+      if (res?.ok) { setAdminPassword(input.value); finish(true); return; }
+      const body = await res?.json().catch(() => null);
+      msg.textContent = body?.error || "Couldn't reach the server.";
+    };
+  });
+}
+
+adminBtn.addEventListener('click', async () => {
+  if (getAdminPassword()) {
+    if (confirm('Log out of admin mode in this browser?')) setAdminPassword('');
+  } else {
+    await askAdminPassword();
+  }
+});
+updateAdminButton();
 
 /** Ranks sorted items; equal keys share a rank (1, 2, 2, 4). */
 function withRanks(items, key) {

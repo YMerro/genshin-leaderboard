@@ -16,6 +16,7 @@
     <div class="top-actions">
       <span id="updated" class="muted"></span>
       <button id="refresh" class="btn" type="button">Refresh</button>
+      <button id="admin-btn" class="btn" type="button">Admin</button>
     </div>
   </header>
 
@@ -66,6 +67,19 @@
       </div>
       <p id="card-msg" class="muted small" role="status"></p>
     </div>
+  </dialog>
+
+  <dialog id="admin-dialog" aria-label="Admin login">
+    <form method="dialog" class="dialog-body admin-form">
+      <h2>Admin login</h2>
+      <p class="muted small">Needed to add or remove players and delete wish history. Remembered in this browser.</p>
+      <input id="admin-password" type="password" autocomplete="current-password" placeholder="Admin password" required>
+      <p id="admin-msg" class="form-msg error" role="status"></p>
+      <div class="dialog-actions">
+        <button class="btn primary" type="submit">Log in</button>
+        <button class="btn" type="button" id="admin-cancel">Cancel</button>
+      </div>
+    </form>
   </dialog>
 
   <script src="app.js"></script>

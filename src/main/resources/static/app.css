@@ -434,6 +434,17 @@ code.cmd { display: inline-block; margin: 4px 0; padding: 6px 10px; overflow-wra
 .result-lost { color: #e5786d; }
 .result-guaranteed { color: var(--muted); }
 
+/* Admin login */
+#admin-btn.on { border-color: var(--gold); color: var(--gold-strong); }
+dialog#admin-dialog {
+  padding: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-raised); color: var(--text);
+  width: min(380px, calc(100vw - 32px));
+}
+dialog#admin-dialog::backdrop { background: #000b; }
+.admin-form h2 { margin: 0; font-size: 18px; color: var(--gold-strong); }
+.admin-form p { margin: 0; }
+.admin-form input { width: 100%; }
+
 /* Build card dialog */
 dialog#card-dialog {
   padding: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-raised); color: var(--text);

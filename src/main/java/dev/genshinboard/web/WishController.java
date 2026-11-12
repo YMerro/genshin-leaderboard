@@ -2,6 +2,7 @@ package dev.genshinboard.web;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +28,7 @@ public class WishController {
 
     private final WishClient client;
     private final WishStore store;
+    private final AtomicBoolean importing = new AtomicBoolean();
 
     public WishController(WishClient client, WishStore store) {
         this.client = client;
@@ -44,11 +46,20 @@ public class WishController {
 
     /** The link is used for this request only; it is never stored or logged. */
     @PostMapping("/import")
-    public ImportResult importWishes(@RequestBody ImportRequest request) {
-        var known = store.allIds();
-        List<Pull> pulls = client.fetchAll(request.url(), known::contains);
-        Map<String, Integer> added = store.merge(pulls);
-        return new ImportResult(added, accounts());
+    public ResponseEntity<?> importWishes(@RequestBody ImportRequest request) {
+        // Imports are open to everyone, so only allow one at a time to avoid hammering HoYoverse
+        if (!importing.compareAndSet(false, true)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(new ApiError("Someone else is importing right now. Try again in a minute."));
+        }
+        try {
+            var known = store.allIds();
+            List<Pull> pulls = client.fetchAll(request.url(), known::contains);
+            Map<String, Integer> added = store.merge(pulls);
+            return ResponseEntity.ok(new ImportResult(added, accounts()));
+        } finally {
+            importing.set(false);
+        }
     }
 
     @DeleteMapping("/{uid}")
