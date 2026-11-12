@@ -56,7 +56,7 @@ jobs:
 
       - name: Scan image (Trivy, report only)
         run: |
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.58.1 \n            image --severity CRITICAL,HIGH --ignore-unfixed --exit-code 0 "$IMAGE:ci"
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.58.1 image --severity CRITICAL,HIGH --ignore-unfixed --exit-code 0 "$IMAGE:ci"
 
       - name: Smoke test in kind
         uses: helm/kind-action@v1
