@@ -1,0 +1,23 @@
+# Not included by default. Copy into an overlay and set your host / ingress class / TLS.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: leaderboard
+  # annotations:
+  #   cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: leaderboard.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: leaderboard
+                port:
+                  name: http
+  # tls:
+  #   - hosts: [leaderboard.example.com]
+  #     secretName: leaderboard-tls

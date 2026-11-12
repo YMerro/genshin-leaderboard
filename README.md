@@ -129,6 +129,33 @@ It only adds or removes a shortcut in your Startup folder; it doesn't start or s
 
 To make it reachable from the internet, a tunnel such as [Tailscale Funnel](https://tailscale.com/kb/1223/funnel) (free, stable HTTPS address) can point at port 8081. Only do this on a PC you own and are allowed to expose; not on a work computer.
 
+## Docker and Kubernetes
+
+The app runs as a container too. CI builds and tests everything; nothing is needed locally.
+
+**Docker**
+
+```bash
+ADMIN_PASSWORD=choose-one docker compose up -d --build   # http://localhost:8081, data in the leaderboard-data volume
+```
+
+The image (multi-stage, JRE 21 Alpine, non-root user 10001) stores data in `/data` and is configured with environment variables: `APP_ADMIN_PASSWORD`, `APP_DATADIR`, `SERVER_PORT`. Health: `/actuator/health/liveness` and `/actuator/health/readiness`.
+
+**Kubernetes** (Kustomize, in `deploy/k8s/`)
+
+```bash
+kubectl create namespace leaderboard
+kubectl -n leaderboard create secret generic leaderboard-admin --from-literal=password=choose-one
+kubectl -n leaderboard apply -k deploy/k8s/base
+kubectl -n leaderboard port-forward svc/leaderboard 8081:80
+```
+
+- One replica with a `Recreate` strategy and a 1 Gi PVC on `/data`: the data is JSON files and the daily snapshot is an in-app job, so two pods must never run at once. Scaling out would need a database first.
+- Hardened pod: non-root, read-only root filesystem, no capabilities, startup/liveness/readiness probes, memory limit with `MaxRAMPercentage`.
+- `base/ingress.example.yaml` is a template for exposing it with an ingress controller.
+
+**CI** (`.github/workflows/ci.yml`): on every push it runs the tests, lints the Dockerfile (hadolint) and renders the manifests, builds the image, scans it with Trivy, deploys it to a throwaway **kind** cluster and checks the health endpoints. On `main` it then pushes `ghcr.io/ymerro/genshin-leaderboard:latest` and `:sha-<commit>`.
+
 ## Notes
 
 - Enka only sees what a player shows on their in-game profile: the characters in their **showcase** (up to 12) with **Show Character Details** turned on. Players without this show up with profile stats only.

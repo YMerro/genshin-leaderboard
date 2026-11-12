@@ -1,0 +1,16 @@
+# Local run:  ADMIN_PASSWORD=choose-one docker compose up -d --build
+# Data is kept in the "leaderboard-data" volume between runs.
+services:
+  leaderboard:
+    build: .
+    image: ghcr.io/ymerro/genshin-leaderboard:local
+    ports:
+      - "8081:8081"
+    environment:
+      APP_ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    volumes:
+      - leaderboard-data:/data
+    restart: unless-stopped
+
+volumes:
+  leaderboard-data:

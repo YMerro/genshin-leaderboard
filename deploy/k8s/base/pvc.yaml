@@ -1,0 +1,10 @@
+# Friends, history, wishes and cached game data live here as JSON files.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: leaderboard-data
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
